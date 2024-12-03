@@ -1,13 +1,9 @@
-
-#include <iostream>
-#include <vector>
-#include <algorithm>
 #include <queue>
-#include <random>
-#include <ctime>
 #include <iostream>
 #include <vector>
 #include <algorithm>
+#include <cstdlib>
+#include <ctime>
 
 struct Process {
     int id, arrival_time, burst_time, start_time, completion_time, waiting_time;
@@ -34,13 +30,13 @@ void sjf(std::vector<Process> &processes) {
             std::sort(ready_queue.begin(), ready_queue.end(), compareByBurstTime);
             Process current = ready_queue.front();
 
-            
+            // Виконуємо обраний процес
             current.start_time = current_time;
             current.completion_time = current_time + current.burst_time;
             current.waiting_time = current.start_time - current.arrival_time;
             current_time = current.completion_time;
 
-           
+            // Видаляємо виконаний процес
             auto it = std::remove_if(processes.begin(), processes.end(), [&](Process p) {
                 return p.id == current.id;
             });
@@ -54,133 +50,71 @@ void sjf(std::vector<Process> &processes) {
         }
     }
 }
-
-struct Process {
-    int id;
-    int arrivalTime;
-    int burstTime;
-    int remainingTime;
-    int priority;
-    int startTime;
-    int finishTime;
-    int waitingTime;
+////////////////////////////////////
+struct ProcessWithPriority {
+    int id, arrival_time, burst_time, priority, start_time, completion_time, waiting_time;
 };
 
-std::vector<Process> generateProcesses(int n) {
+void priorityWithAging(std::vector<ProcessWithPriority> &processes, int aging_threshold) {
+    int current_time = 0;
+    while (!processes.empty()) {
+        // Старіння: підвищуємо пріоритет процесам, які очікують понад threshold
+        for (auto &process : processes) {
+            if (current_time - process.arrival_time > aging_threshold) {
+                process.priority--;
+            }
+        }
+
+        // Сортуємо за пріоритетом та часом прибуття
+        std::sort(processes.begin(), processes.end(), [](const ProcessWithPriority &a, const ProcessWithPriority &b) {
+            if (a.priority == b.priority) return a.arrival_time < b.arrival_time;
+            return a.priority < b.priority;
+        });
+
+        // Виконуємо процес із найвищим пріоритетом
+        ProcessWithPriority current = processes.front();
+        processes.erase(processes.begin());
+
+        current.start_time = std::max(current_time, current.arrival_time);
+        current.completion_time = current.start_time + current.burst_time;
+        current.waiting_time = current.start_time - current.arrival_time;
+        current_time = current.completion_time;
+
+        std::cout << "Process " << current.id
+                  << " executed from " << current.start_time
+                  << " to " << current.completion_time << "\n";
+    }
+}
+///////////////////////////////////////////////////////////////////////////
+
+std::vector<Process> generateProcesses(int count) {
     std::vector<Process> processes;
-    std::srand(std::time(0));
-    for (int i = 0; i < n; i++) {
-        Process p;
-        p.id = i + 1;
-        p.arrivalTime = std::rand() % 10;
-        p.burstTime = (std::rand() % 10) + 1;
-        p.remainingTime = p.burstTime;
-        p.priority = std::rand() % 5 + 1;  
-        processes.push_back(p);
+    for (int i = 1; i <= count; i++) {
+        processes.push_back({i, rand() % 10, rand() % 10 + 1, 0, 0, 0});
     }
     return processes;
 }
 
-void roundRobin(std::vector<Process> processes, int quantum) {
-    int time = 0;
-    std::queue<Process*> processQueue;
-    for (auto &p : processes) {
-        if (p.arrivalTime <= time) {
-            processQueue.push(&p);
-        }
+std::vector<ProcessWithPriority> generateProcessesWithPriority(int count) {
+    std::vector<ProcessWithPriority> processes;
+    for (int i = 1; i <= count; i++) {
+        processes.push_back({i, rand() % 10, rand() % 10 + 1, rand() % 5 + 1, 0, 0, 0});
     }
-
-    std::cout << "Round Robin Execution:\n";
-    while (!processQueue.empty()) {
-        Process* p = processQueue.front();
-        processQueue.pop();
-
-        if (p->remainingTime > quantum) {
-            time += quantum;
-            p->remainingTime -= quantum;
-            std::cout << "Process " << p->id << ": Remaining time = " << p->remainingTime << std::endl;
-
-            for (auto &next : processes) {
-                if (next.arrivalTime <= time && next.remainingTime > 0 && &next != p) {
-                    processQueue.push(&next);
-                }
-            }
-            processQueue.push(p); 
-        } else {
-            time += p->remainingTime;
-            p->finishTime = time;
-            p->remainingTime = 0;
-            std::cout << "Process " << p->id << " finished at time " << p->finishTime << std::endl;
-        }
-    }
+    return processes;
 }
-
-void fcfs(std::vector<Process> processes) {
-    std::sort(processes.begin(), processes.end(), [](Process a, Process b) {
-        return a.arrivalTime < b.arrivalTime;
-    });
-
-    int time = 0;
-    std::cout << "FCFS Execution:\n";
-    for (auto &p : processes) {
-        if (time < p.arrivalTime) time = p.arrivalTime;
-        p.startTime = time;
-        time += p.burstTime;
-        p.finishTime = time;
-        p.waitingTime = p.startTime - p.arrivalTime;
-        std::cout << "Process " << p.id << ": Start time = " << p.startTime << ", Finish time = " << p.finishTime << ", Waiting time = " << p.waitingTime << std::endl;
-    }
-}
-
-void priorityScheduling(std::vector<Process> processes) {
-    std::sort(processes.begin(), processes.end(), [](Process a, Process b) {
-        return a.priority < b.priority;
-    });
-
-    int time = 0;
-    std::cout << "Priority Scheduling Execution:\n";
-    for (auto &p : processes) {
-        if (time < p.arrivalTime) time = p.arrivalTime;
-        p.startTime = time;
-        time += p.burstTime;
-        p.finishTime = time;
-        p.waitingTime = p.startTime - p.arrivalTime;
-        std::cout << "Process " << p.id << ": Priority = " << p.priority << ", Finish time = " << p.finishTime << std::endl;
-    }
-}
-
-void calculateAverageTimes(const std::vector<Process>& processes, const std::string& algorithmName) {
-    int totalWaitingTime = 0;
-    int totalTurnaroundTime = 0;
-    for (const auto& p : processes) {
-        int turnaroundTime = p.finishTime - p.arrivalTime;
-        totalWaitingTime += p.waitingTime;
-        totalTurnaroundTime += turnaroundTime;
-    }
-    double avgWaitingTime = static_cast<double>(totalWaitingTime) / processes.size();
-    double avgTurnaroundTime = static_cast<double>(totalTurnaroundTime) / processes.size();
-    std::cout << algorithmName << " Average Waiting Time: " << avgWaitingTime << std::endl;
-    std::cout << algorithmName << " Average Turnaround Time: " << avgTurnaroundTime << std::endl;
-}
-
+/////////////////////////////////////////////////////////////////////////////
 int main() {
-    int numProcesses = 5;
-    int quantum = 3;
-    std::vector<Process> processes = generateProcesses(numProcesses);
+    srand(time(0));
 
-    
-    std::vector<Process> rrProcesses = processes;
-    roundRobin(rrProcesses, quantum);
-    calculateAverageTimes(rrProcesses, "Round Robin");
+    // Генерація процесів
+    std::vector<Process> sjfProcesses = generateProcesses(5);
+    std::cout << "SJF Scheduling:\n";
+    sjf(sjfProcesses);
 
-    
-    std::vector<Process> fcfsProcesses = processes;
-    fcfs(fcfsProcesses);
-    calculateAverageTimes(fcfsProcesses, "FCFS");
+    std::vector<ProcessWithPriority> priorityProcesses = generateProcessesWithPriority(5);
+    std::cout << "\nPriority Scheduling with Aging:\n";
+    priorityWithAging(priorityProcesses, 3);
 
-   
-    std::vector<Process> priorityProcesses = processes;
-    priorityScheduling(priorityProcesses);
-    calculateAverageTimes(priorityProcesses, "Priority Scheduling");
-
+    return 0;
+}
   
