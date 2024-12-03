@@ -58,20 +58,19 @@ struct ProcessWithPriority {
 void priorityWithAging(std::vector<ProcessWithPriority> &processes, int aging_threshold) {
     int current_time = 0;
     while (!processes.empty()) {
-        // Старіння: підвищуємо пріоритет процесам, які очікують понад threshold
         for (auto &process : processes) {
             if (current_time - process.arrival_time > aging_threshold) {
                 process.priority--;
             }
         }
 
-        // Сортуємо за пріоритетом та часом прибуття
+        
         std::sort(processes.begin(), processes.end(), [](const ProcessWithPriority &a, const ProcessWithPriority &b) {
             if (a.priority == b.priority) return a.arrival_time < b.arrival_time;
             return a.priority < b.priority;
         });
 
-        // Виконуємо процес із найвищим пріоритетом
+       
         ProcessWithPriority current = processes.front();
         processes.erase(processes.begin());
 
@@ -106,7 +105,7 @@ std::vector<ProcessWithPriority> generateProcessesWithPriority(int count) {
 int main() {
     srand(time(0));
 
-    // Генерація процесів
+    
     std::vector<Process> sjfProcesses = generateProcesses(5);
     std::cout << "SJF Scheduling:\n";
     sjf(sjfProcesses);
